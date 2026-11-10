@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Task List</title>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Daily Tasks">
+  
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 min-h-screen py-10 px-4 text-slate-800 dark:text-slate-100 flex justify-center items-start transition-colors duration-200">
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 transition-colors duration-200 relative z-10">
+    <!-- Header with Dark Mode Toggle -->
+    <div class="mb-5">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Daily Task List</h1>
+        <div class="flex items-center gap-2">
+          <!-- Theme Toggle Button -->
+          <button 
+            id="themeToggleBtn" 
+            class="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            title="Toggle theme"
+          >
+            <!-- Sun Icon (shown in dark mode) -->
+            <svg id="sunIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <!-- Moon Icon (shown in light mode) -->
+            <svg id="moonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          </button>
+
+          <!-- Auto-saved Badge -->
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Auto-saved
+          </span>
+        </div>
+      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Step 10: Celebration celebration & polish</p>
+    </div>
+
+    <!-- Progress Card -->
+    <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3.5 border border-slate-200/70 dark:border-slate-800 mb-5 transition-colors">
+      <div class="flex justify-between items-center text-xs font-medium mb-1.5">
+        <span class="text-slate-600 dark:text-slate-300">Daily Progress</span>
+        <span id="progressText" class="text-blue-600 dark:text-blue-400 font-semibold">0% (0 of 0 done)</span>
+      </div>
+      <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div id="progressBar" class="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Input Form with Priority & Due Date -->
+    <div class="space-y-2.5 mb-4">
+      <div class="flex gap-2">
+        <input 
+          type="text" 
+          id="taskInput" 
+          placeholder="What do you need to do today?" 
+          class="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
+        >
+        <button 
+          id="addBtn" 
+          class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm shrink-0"
+        >
+          Add Task
+        </button>
+      </div>
+
+      <!-- Priority Picker & Due Date -->
+      <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+        <!-- Priority -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-slate-400 dark:text-slate-500 font-medium">Priority:</span>
+          <div class="flex gap-1 text-xs">
+            <label class="cursor-pointer">
+              <input type="radio" name="priority" value="high" class="sr-only peer">
+              <span class="px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 peer-checked:bg-rose-50 dark:peer-checked:bg-rose-950/60 peer-checked:text-rose-700 dark:peer-checked:text-rose-400 peer-checked:border-rose-300 dark:peer-checked:border-rose-800 peer-checked:font-semibold transition-all block">
+                High
+              </span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="priority" value="medium" class="sr-only peer" checked>
+              <span class="px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 peer-checked:bg-amber-50 dark:peer-checked:bg-amber-950/60 peer-checked:text-amber-700 dark:peer-checked:text-amber-400 peer-checked:border-amber-300 dark:peer-checked:border-amber-800 peer-checked:font-semibold transition-all block">
+                Med
+              </span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="priority" value="low" class="sr-only peer">
+              <span class="px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 peer-checked:bg-slate-100 dark:peer-checked:bg-slate-800 peer-checked:text-slate-700 dark:peer-checked:text-slate-200 peer-checked:border-slate-300 dark:peer-checked:border-slate-600 peer-checked:font-semibold transition-all block">
+                Low
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Due Date Input -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-slate-400 dark:text-slate-500 font-medium">Due:</span>
+          <input 
+            type="date" 
+            id="dueDateInput" 
+            class="text-xs px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar & Summary -->
+    <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800 mb-4 gap-2">
+      <!-- Filter Tabs -->
+      <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400">
+        <button id="filterAll" class="filter-btn px-3 py-1 rounded-lg bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm transition-all">All</button>
+        <button id="filterActive" class="filter-btn px-3 py-1 rounded-lg hover:text-slate-900 dark:hover:text-slate-100 transition-all">Active</button>
+        <button id="filterCompleted" class="filter-btn px-3 py-1 rounded-lg hover:text-slate-900 dark:hover:text-slate-100 transition-all">Completed</button>
+      </div>
+
+      <!-- Clear Completed Button -->
+      <button 
+        id="clearCompletedBtn" 
+        class="text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors disabled:opacity-40 disabled:hover:text-slate-400 dark:disabled:hover:text-slate-500 disabled:cursor-not-allowed"
+      >
+        Clear completed
+      </button>
+    </div>
+
+    <!-- Task List -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tasks</h2>
+          <span class="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Double-click to edit</span>
+        </div>
+        <span id="taskCount" class="text-xs font-medium text-slate-400 dark:text-slate-500">0 tasks left</span>
+      </div>
+      
+      <ul id="taskList" class="space-y-2"></ul>
+
+      <p id="emptyNotice" class="text-sm text-slate-400 dark:text-slate-500 text-center py-8 hidden">
+        No tasks found in this view.
+      </p>
+    </div>
+
+    <!-- Backup & Data Transfer Footer -->
+    <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <span class="font-medium">Data Backup:</span>
+      <div class="flex items-center gap-2">
+        <button 
+          id="exportBtn" 
+          class="hover:text-blue-600 dark:hover:text-blue-400 underline decoration-slate-300 dark:decoration-slate-700 transition-colors"
+          title="Download tasks as JSON file"
+        >
+          Export JSON
+        </button>
+        <span>&bull;</span>
+        <label class="hover:text-blue-600 dark:hover:text-blue-400 underline decoration-slate-300 dark:decoration-slate-700 cursor-pointer transition-colors">
+          <span>Import JSON</span>
+          <input type="file" id="importInput" accept=".json" class="sr-only">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let tasks = [];
+    let currentFilter = 'all';
+    let previousPercent = 0;
+
+    const STORAGE_KEY = 'daily_tasks_data';
+    const THEME_KEY = 'daily_tasks_theme';
+
+    const taskInput = document.getElementById('taskInput');
+    const dueDateInput = document.getElementById('dueDateInput');
+    const addBtn = document.getElementById('addBtn');
+    const taskList = document.getElementById('taskList');
+    const emptyNotice = document.getElementById('emptyNotice');
+    const taskCount = document.getElementById('taskCount');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    const filterAll = document.getElementById('filterAll');
+    const filterActive = document.getElementById('filterActive');
+    const filterCompleted = document.getElementById('filterCompleted');
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    const exportBtn = document.getElementById('exportBtn');
+    const importInput = document.getElementById('importInput');
+
+    dueDateInput.value = new Date().toISOString().slice(0, 10);
+
+    // 1. Confetti & Audio Effects
+    function playCelebrationSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        // Play three cheerful ascending tones (C5, E5, G5)
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        osc.frequency.setValueAtTime(783.99, now + 0.24);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.6);
+      } catch (e) {
+        console.warn('Audio effects unavailable:', e);
+      }
+    }
+
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const ctx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+    let confettiAnimId = null;
+
+    function resizeCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function triggerConfetti() {
+      playCelebrationSound();
+      confettiParticles = [];
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+      
+      for (let i = 0; i < 70; i++) {
+        confettiParticles.push({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2 - 50,
+          vx: (Math.random() - 0.5) * 14,
+          vy: (Math.random() - 0.7) * 14,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          vRot: (Math.random() - 0.5) * 10,
+          alpha: 1
+        });
+      }
+
+      if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+      animateConfetti();
+    }
+
+    function animateConfetti() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      let alive = false;
+
+      confettiParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.35; // gravity
+        p.rotation += p.vRot;
+        p.alpha -= 0.012; // fade out
+
+        if (p.alpha > 0) {
+          alive = true;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
+      });
+
+      if (alive) {
+        confettiAnimId = requestAnimationFrame(animateConfetti);
+      } else {
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      }
+    }
+
+    // 2. Theme Management (Dark Mode)
+    function applyTheme(isDark) {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      } else {
+        document.documentElement.classList.remove('dark');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      }
+      try {
+        localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      } catch (e) {
+        console.warn('Storage unavailable:', e);
+      }
+    }
+
+    function initTheme() {
+      try {
+        const savedTheme = localStorage.getItem(THEME_KEY);
+        if (savedTheme) {
+          applyTheme(savedTheme === 'dark');
+        } else {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          applyTheme(prefersDark);
+        }
+      } catch (e) {
+        applyTheme(false);
+      }
+    }
+
+    themeToggleBtn.addEventListener('click', function() {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyTheme(!isDark);
+      renderTasks();
+    });
+
+    // 3. Storage
+    function loadTasks() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          tasks = JSON.parse(stored);
+        } else {
+          const today = new Date().toISOString().slice(0, 10);
+          tasks = [
+            { id: 1, text: 'Review morning emails', completed: false, priority: 'high', dueDate: today },
+            { id: 2, text: 'Plan afternoon priority list', completed: true, priority: 'medium', dueDate: today }
+          ];
+          saveTasks();
+        }
+      } catch (e) {
+        console.warn('Storage unavailable:', e);
+        tasks = [{ id: 1, text: 'Review morning emails', completed: false, priority: 'high' }];
+      }
+    }
+
+    function saveTasks() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      } catch (e) {
+        console.warn('Unable to save:', e);
+      }
+    }
+
+    // 4. Helpers: Priority & Due Date Formatters
+    function getPriorityBadge(priority) {
+      if (priority === 'high') {
+        return { 
+          label: 'High', 
+          class: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800' 
+        };
+      } else if (priority === 'low') {
+        return { 
+          label: 'Low', 
+          class: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700' 
+        };
+      }
+      return { 
+        label: 'Med', 
+        class: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' 
+      };
+    }
+
+    function getDueDateBadge(dueDateStr, isCompleted) {
+      if (!dueDateStr) return null;
+      
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (dueDateStr === todayStr) {
+        return {
+          label: 'Today',
+          class: isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-blue-600 dark:text-blue-400 font-medium'
+        };
+      } else if (dueDateStr < todayStr) {
+        return {
+          label: 'Overdue',
+          class: isCompleted ? 'text-slate-400 dark:text-slate-500' : 'text-rose-600 dark:text-rose-400 font-semibold'
+        };
+      } else {
+        const parts = dueDateStr.split('-');
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        return {
+          label: `${month}/${day}`,
+          class: 'text-slate-400 dark:text-slate-500'
+        };
+      }
+    }
+
+    // 5. Progress Calculation & Celebration Trigger
+    function updateProgress() {
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.completed).length;
+      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      progressBar.style.width = percent + '%';
+      progressText.textContent = `${percent}% (${completed} of ${total} done)`;
+
+      if (percent === 100 && total > 0) {
+        progressBar.classList.remove('bg-blue-600', 'dark:bg-blue-500');
+        progressBar.classList.add('bg-emerald-500');
+        
+        // Trigger celebration only if transitioning to 100%
+        if (previousPercent < 100) {
+          triggerConfetti();
+        }
+      } else {
+        progressBar.classList.remove('bg-emerald-500');
+        progressBar.classList.add('bg-blue-600', 'dark:bg-blue-500');
+      }
+
+      previousPercent = percent;
+    }
+
+    // 6. Update Filter Button Styling
+    function updateFilterButtons() {
+      const activeClass = 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm';
+      const inactiveClass = 'hover:text-slate-900 dark:hover:text-slate-100 text-slate-600 dark:text-slate-400';
+
+      [filterAll, filterActive, filterCompleted].forEach(btn => {
+        btn.className = 'filter-btn px-3 py-1 rounded-lg transition-all ' + inactiveClass;
+      });
+
+      if (currentFilter === 'all') {
+        filterAll.className = 'filter-btn px-3 py-1 rounded-lg transition-all ' + activeClass;
+      } else if (currentFilter === 'active') {
+        filterActive.className = 'filter-btn px-3 py-1 rounded-lg transition-all ' + activeClass;
+      } else if (currentFilter === 'completed') {
+        filterCompleted.className = 'filter-btn px-3 py-1 rounded-lg transition-all ' + activeClass;
+      }
+    }
+
+    // 7. Render Task List
+    function renderTasks() {
+      taskList.innerHTML = '';
+
+      let filteredTasks = tasks;
+      if (currentFilter === 'active') {
+        filteredTasks = tasks.filter(t => !t.completed);
+      } else if (currentFilter === 'completed') {
+        filteredTasks = tasks.filter(t => t.completed);
+      }
+
+      emptyNotice.classList.toggle('hidden', filteredTasks.length > 0);
+
+      filteredTasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = 'group p-3 bg-slate-50 hover:bg-slate-100/70 dark:bg-slate-800/80 dark:hover:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-800 text-sm flex items-center justify-between gap-3 transition-colors';
+
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-3 cursor-pointer flex-1 min-w-0';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.completed;
+        checkbox.className = 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-600 dark:bg-slate-700 cursor-pointer shrink-0';
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'flex flex-col min-w-0';
+
+        const span = document.createElement('span');
+        span.className = 'task-text text-slate-700 dark:text-slate-200 truncate select-none ' + 
+          (task.completed ? 'line-through text-slate-400 dark:text-slate-500' : '');
+        span.textContent = task.text;
+        span.title = 'Double-click to edit';
+
+        textContainer.appendChild(span);
+
+        const dueInfo = getDueDateBadge(task.dueDate, task.completed);
+        if (dueInfo) {
+          const dueSpan = document.createElement('span');
+          dueSpan.className = `text-[11px] ${dueInfo.class} select-none`;
+          dueSpan.textContent = `Due ${dueInfo.label}`;
+          textContainer.appendChild(dueSpan);
+        }
+
+        checkbox.addEventListener('change', function() {
+          task.completed = checkbox.checked;
+          saveTasks();
+          renderTasks();
+        });
+
+        // Inline edit
+        span.addEventListener('dblclick', function(e) {
+          e.preventDefault();
+          const currentText = task.text;
+
+          const editInput = document.createElement('input');
+          editInput.type = 'text';
+          editInput.value = currentText;
+          editInput.className = 'w-full px-2 py-1 text-sm rounded-lg border border-blue-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none';
+
+          function saveEdit() {
+            const val = editInput.value.trim();
+            if (val !== '') {
+              task.text = val;
+              saveTasks();
+            }
+            renderTasks();
+          }
+
+          editInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') saveEdit();
+            if (event.key === 'Escape') renderTasks();
+          });
+
+          editInput.addEventListener('blur', saveEdit);
+
+          textContainer.replaceChild(editInput, span);
+          editInput.focus();
+          editInput.select();
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(textContainer);
+
+        // Right side: Badge + Delete
+        const rightWrap = document.createElement('div');
+        rightWrap.className = 'flex items-center gap-2 shrink-0';
+
+        const badgeConfig = getPriorityBadge(task.priority || 'medium');
+        const badge = document.createElement('span');
+        badge.className = `text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeConfig.class}`;
+        badge.textContent = badgeConfig.label;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-lg transition-colors';
+        deleteBtn.title = 'Delete task';
+        deleteBtn.innerHTML = `
+          <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        `;
+
+        deleteBtn.addEventListener('click', function() {
+          tasks = tasks.filter(t => t.id !== task.id);
+          saveTasks();
+          renderTasks();
+        });
+
+        rightWrap.appendChild(badge);
+        rightWrap.appendChild(deleteBtn);
+
+        li.appendChild(label);
+        li.appendChild(rightWrap);
+        taskList.appendChild(li);
+      });
+
+      const remaining = tasks.filter(t => !t.completed).length;
+      taskCount.textContent = remaining === 1 ? '1 task left' : `${remaining} tasks left`;
+
+      const completedCount = tasks.filter(t => t.completed).length;
+      clearCompletedBtn.disabled = completedCount === 0;
+
+      updateFilterButtons();
+      updateProgress();
+    }
+
+    // 8. Actions
+    function addTask() {
+      const text = taskInput.value.trim();
+      if (text === '') {
+        taskInput.focus();
+        return;
+      }
+
+      const selectedRadio = document.querySelector('input[name="priority"]:checked');
+      const priority = selectedRadio ? selectedRadio.value : 'medium';
+      const dueDate = dueDateInput.value;
+
+      tasks.push({
+        id: Date.now(),
+        text: text,
+        completed: false,
+        priority: priority,
+        dueDate: dueDate
+      });
+
+      saveTasks();
+      if (currentFilter === 'completed') {
+        currentFilter = 'all';
+      }
+
+      renderTasks();
+      taskInput.value = '';
+      taskInput.focus();
+    }
+
+    function clearCompleted() {
+      tasks = tasks.filter(t => !t.completed);
+      saveTasks();
+      renderTasks();
+    }
+
+    // 9. Export & Import JSON
+    exportBtn.addEventListener('click', function() {
+      try {
+        const dataStr = JSON.stringify(tasks, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `daily-tasks-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.warn('Export failed:', e);
+      }
+    });
+
+    importInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed)) {
+            tasks = parsed;
+            saveTasks();
+            renderTasks();
+          }
+        } catch (err) {
+          console.warn('Invalid JSON format:', err);
+        }
+      };
+      reader.readAsText(file);
+      importInput.value = '';
+    });
+
+    // 10. Event Listeners
+    addBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        addTask();
+      }
+    });
+
+    clearCompletedBtn.addEventListener('click', clearCompleted);
+
+    filterAll.addEventListener('click', function() {
+      currentFilter = 'all';
+      renderTasks();
+    });
+
+    filterActive.addEventListener('click', function() {
+      currentFilter = 'active';
+      renderTasks();
+    });
+
+    filterCompleted.addEventListener('click', function() {
+      currentFilter = 'completed';
+      renderTasks();
+    });
+
+    // Initialize Theme & Data
+    initTheme();
+    loadTasks();
+    renderTasks();
+  </script>
+</body>
+</html>
